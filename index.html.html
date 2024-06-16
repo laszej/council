@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wykres kołowy w HTML Canvas</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            flex-direction: column;
+        }
+        canvas {
+            border: 2px solid #333;
+            margin-top: 20px;
+        }
+        h1 {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #countInfo {
+            font-size: 18px;
+        }
+        #memberName {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rada Osiedla Nowe Winogrady Północ</h1>
+    <h1>Kliknij, by wyświetlić członka Rady</h1>
+    <canvas id="pieChart" width="400" height="400"></canvas>
+    <h1 id="countInfo"></h1>
+    <div id="memberName"></div>
+    <h1 id="membersAll"></h1>
+    <h1 id="membersAllByName"></h1>
+   
+
+    <script>
+        const canvas = document.getElementById('pieChart');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = Math.min(canvas.width, canvas.height) / 2 - 20;
+
+        const blueColor = 'blue';
+        const redColor = 'red';
+        const whiteColor = 'white';
+
+        // Tablice z członkami
+        const blueMembers = [
+            'Mateusz Otta', 'Paweł Lewandowski', 'Małgorzata Wielgosz', 'Urszula Sobkowiak',
+            'Jacek Paluszkiewicz', 'Emil Witczak', 'Stanisław Laskowski', 'Rafał Walkowiak'
+        ];
+
+        const redMembers = [
+            'Marcin Zaremba', 'Bartosz Werner', 'Halina Kruk', 'Sandra Kasprzak',
+            'Michał Werner', 'Sylwia Zawieruszyńska', 'Maria Borowska'
+        ];
+
+        const all = redMembers + blueMembers
+
+        // Rysowanie wykresu kołowego
+        function drawPieChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const totalMembers = blueMembers.length + redMembers.length + 1; // +1 dla pustego segmentu
+            const segmentCount = 16; // 8 niebieskich + 7 czerwonych + 1 pusty
+            const angle = (2 * Math.PI) / segmentCount;
+
+            let startAngle = -Math.PI / 2;
+
+            // Rysowanie niebieskich segmentów
+            ctx.fillStyle = blueColor;
+            drawSegments(blueMembers, 8, totalMembers, segmentCount, startAngle, angle);
+
+            // Rysowanie czerwonych segmentów
+            ctx.fillStyle = redColor;
+            drawSegments(redMembers, 7, totalMembers, segmentCount, startAngle + (8 * angle), angle);
+
+            // Rysowanie pustego segmentu
+            ctx.fillStyle = whiteColor;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle + (15 * angle), startAngle + (16 * angle));
+            ctx.lineTo(centerX, centerY);
+            ctx.fill();
+            ctx.stroke();
+
+            // Informacja o liczbie członków
+            const countInfo = document.getElementById('countInfo');
+            countInfo.textContent = `WdZ: ${blueMembers.length} Opozycja: ${redMembers.length}`;
+            const totalCouncilMembers = document.getElementById("membersAll")
+            totalCouncilMembers.innerHTML = "Wszystkich Radnych:" + parseFloat(blueMembers.length + redMembers.length)
+            const totalCouncilMembersByName = document.getElementById("membersAllByName")
+           
+
+        }
+
+        // Funkcja do rysowania segmentów
+        function drawSegments(members, segmentCount, totalMembers, requestedSegmentCount, startAngle, angle) {
+            for (let i = 0; i < segmentCount; i++) {
+                const endAngle = startAngle + angle;
+
+                // Rysowanie segmentu
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.fill();
+                ctx.stroke();
+
+                // Rysowanie białej linii oddzielającej
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + radius * Math.cos(startAngle), centerY + radius * Math.sin(startAngle));
+                ctx.strokeStyle = 'white';
+                ctx.stroke();
+
+                // Zapisz dane o członku, jeśli to jest segment z członkiem
+                if (i < members.length) {
+                    const member = members[i].toUpperCase(); // Nazwisko dużymi literami
+                    const segmentData = {
+                        startAngle: startAngle,
+                        endAngle: endAngle,
+                        member: member
+                    };
+                    segments.push(segmentData);
+                } else if (i === 15) {
+                    // Segment pusty, null
+                    const segmentData = {
+                        startAngle: startAngle,
+                        endAngle: endAngle,
+                        member: null
+                    };
+                    segments.push(segmentData);
+                }
+
+                // Przesunięcie kąta początkowego
+                startAngle = endAngle;
+            }
+        }
+
+       
+
+        // Obsługa zdarzenia najechania na wykres
+        canvas.addEventListener('mousemove', handleMouseMove);
+
+        // Obsługa zdarzenia kliknięcia na wykres
+        canvas.addEventListener('click', handleClick);
+
+        // Funkcja obsługująca zdarzenie najechania na wykres
+        function handleMouseMove(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const angle = Math.atan2(y - centerY, x - centerX);
+            let hoveredMember = null;
+
+            // Sprawdź, na którym segmencie znajduje się kursor
+            for (const segment of segments) {
+                if (angle >= segment.startAngle && angle <= segment.endAngle) {
+                    hoveredMember = segment.member;
+                    break;
+                }
+            }
+
+            // Wyświetl nazwisko członka
+            displayMemberName(hoveredMember);
+        }
+
+        // Funkcja obsługująca zdarzenie kliknięcia na wykres
+        function handleClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const angle = Math.atan2(y - centerY, x - centerX);
+            let clickedMember = null;
+
+            // Sprawdź, na którym segmencie nastąpiło kliknięcie
+            for (const segment of segments) {
+                if (angle >= segment.startAngle && angle <= segment.endAngle) {
+                    clickedMember = segment.member;
+                    break;
+                }
+            }
+
+            // Wyświetl nazwisko członka po kliknięciu
+            displayMemberName(clickedMember);
+        }
+
+        // Funkcja wyświetlająca nazwisko członka
+        function displayMemberName(member) {
+            const memberNameDiv = document.getElementById('memberName');
+            memberNameDiv.textContent = member ? member : '';
+        }
+
+        
+   
+       
+
+       
+
+        // Inicjalizacja
+        const segments = [];
+        drawPieChart();
+
+    </script>
+</body>
+</html>
